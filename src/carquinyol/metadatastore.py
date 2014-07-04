@@ -14,13 +14,13 @@ class MetadataStore(object):
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
         else:
-            received_keys = metadata.keys()
+            received_keys = list(metadata.keys())
             for key in os.listdir(metadata_path):
                 if key not in _INTERNAL_KEYS and key not in received_keys:
                     os.remove(os.path.join(metadata_path, key))
 
         metadata['uid'] = uid
-        for key, value in metadata.items():
+        for key, value in list(metadata.items()):
             self._set_property(uid, key, value, md_path=metadata_path)
 
     def _set_property(self, uid, key, value, md_path=False):
@@ -38,9 +38,9 @@ class MetadataStore(object):
         # str() is 8-bit clean right now, but
         # this won't last. We will need more explicit
         # handling of strings, int/floats vs raw data
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode('utf-8')
-        elif not isinstance(value, basestring):
+        elif not isinstance(value, str):
             value = str(value)
 
         # avoid pointless writes; replace atomically

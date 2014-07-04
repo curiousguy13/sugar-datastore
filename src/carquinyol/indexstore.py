@@ -94,23 +94,23 @@ class TermGenerator (xapian.TermGenerator):
         self._index_unknown(document, properties)
 
     def _index_known(self, document, properties):
-        for name, prefix in _QUERY_TERM_MAP.items():
+        for name, prefix in list(_QUERY_TERM_MAP.items()):
             if (name not in properties):
                 continue
 
             self._index_property(document, name, properties.pop(name), prefix)
 
     def _index_unknown(self, document, properties):
-        for name, value in properties.items():
+        for name, value in list(properties.items()):
             self._index_property(document, name, value)
 
     def _index_property(self, doc, name, value, prefix=''):
         if name in _PROPERTIES_NOT_TO_INDEX or not value:
             return
 
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode('utf-8')
-        elif not isinstance(value, basestring):
+        elif not isinstance(value, str):
             value = str(value)
 
         # We need to add the full value (i.e. not split into words) so
@@ -136,7 +136,7 @@ class QueryParser (xapian.QueryParser):
     def __init__(self):
         xapian.QueryParser.__init__(self)
 
-        for name, prefix in _QUERY_TERM_MAP.items():
+        for name, prefix in list(_QUERY_TERM_MAP.items()):
             self.add_prefix(name, prefix)
             self.add_prefix('', prefix)
 
@@ -164,7 +164,7 @@ class QueryParser (xapian.QueryParser):
             self._convert_value(info, start), self._convert_value(info, end))
 
     def _convert_value(self, info, value):
-        if info['type'] in (float, int, long):
+        if info['type'] in (float, int, int):
             return xapian.sortable_serialise(info['type'](value))
 
         return str(info['type'](value))
@@ -181,7 +181,7 @@ class QueryParser (xapian.QueryParser):
         elif isinstance(value, dict):
             # compatibility option for timestamp: {'start': 0, 'end': 1}
             start = value.get('start', 0)
-            end = value.get('end', sys.maxint)
+            end = value.get('end', sys.maxsize)
             return self._parse_query_value_range(name, info, (start, end))
 
         else:
@@ -197,7 +197,7 @@ class QueryParser (xapian.QueryParser):
                         QueryParser.FLAG_WILDCARD,
                 '')
 
-        except xapian.QueryParserError, exception:
+        except xapian.QueryParserError as exception:
             logging.warning('Invalid query string: ' + exception.get_msg())
             return Query()
 
@@ -210,7 +210,7 @@ class QueryParser (xapian.QueryParser):
         if query_string is not None:
             queries.append(self._parse_query_xapian(str(query_string)))
 
-        for name, value in query_dict.items():
+        for name, value in list(query_dict.items()):
             if name in _QUERY_TERM_MAP:
                 queries.append(self._parse_query_term(name,
                     _QUERY_TERM_MAP[name], value))
@@ -285,7 +285,7 @@ class IndexStore(object):
         postings = self._database.postlist(_PREFIX_FULL_VALUE + \
             _PREFIX_UID + uid)
         try:
-            __ = postings.next()
+            __ = next(postings)
         except StopIteration:
             return False
         return True
@@ -405,7 +405,7 @@ class IndexStore(object):
                 logging.debug("Start database flush")
                 self._database.flush()
                 logging.debug("Completed database flush")
-            except Exception, e:
+            except Exception as e:
                 logging.exception(e)
                 logging.error("Exception during database.flush()")
                 # bail out to trigger a reindex
